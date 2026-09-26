@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shinobi Draft Wheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0E1C17;
+  --surface: #15291F;
+  --surface-2: #1B3327;
+  --line: #2A4A38;
+  --ink: #ECF1E4;
+  --muted: #9BB09F;
+  --accent: #FF8A1F;
+  --accent-ink: #1A0E02;
+  --naruto: #FF8A1F;
+  --shippuden: #7DB3E3;
+  --danger: #E0664A;
+  --display: "Dela Gothic One", "Arial Black", Impact, sans-serif;
+  --body: "Zen Kaku Gothic New", "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body {
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-inline: 16px;
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1160px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 5vw, 44px); line-height: 1; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.sub { color: var(--muted); margin: 0; max-width: 60ch; }
+h2 { font-family: var(--display); font-weight: 400; font-size: 18px; margin: 0; letter-spacing: .02em; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: 1fr; } }
+
+.stage { display: grid; gap: 14px; justify-items: center; }
+.turn { width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.turn-name { font-family: var(--display); font-size: clamp(20px, 3.4vw, 28px); line-height: 1.1; }
+.turn-name em { font-style: normal; color: var(--accent); }
+.progress { font-variant-numeric: tabular-nums; color: var(--muted); }
+
+.wheel-box { position: relative; width: min(100%, 540px); aspect-ratio: 1; max-width: 100%; }
+.wheel-box canvas { width: 100%; height: 100%; display: block; }
+.pointer {
+  position: absolute; left: 50%; top: -6px; transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 16px solid transparent; border-right: 16px solid transparent;
+  border-top: 30px solid var(--accent);
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,.45));
+}
+.hub {
+  position: absolute; inset: 0; margin: auto; width: 22%; height: 22%;
+  border-radius: 50%; background: var(--bg); border: 3px solid var(--accent);
+  display: grid; place-items: center; text-align: center;
+  font-family: var(--display); font-size: clamp(11px, 2.4vw, 15px); line-height: 1.1; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.hub small { display: block; font-family: var(--body); font-size: 10px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+
+.reveal { width: 100%; min-height: 96px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; display: grid; gap: 4px; }
+.reveal .who { font-family: var(--display); font-size: clamp(22px, 4.4vw, 34px); line-height: 1.1; text-wrap: balance; }
+.reveal .meta { color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.reveal.flash { animation: flash .6s ease-out; }
+@keyframes flash { from { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255,138,31,.25); } }
+
+.controls { width: 100%; display: flex; flex-wrap: wrap; gap: 10px; }
+button {
+  font: inherit; font-weight: 700; cursor: pointer; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  padding: 10px 16px; min-height: 44px;
+}
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--shippuden); outline-offset: 2px; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-family: var(--display); font-weight: 400; font-size: 18px; letter-spacing: .03em; flex: 1 1 180px; }
+button.ghost { background: transparent; }
+button.danger { color: var(--danger); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 14px; }
+.side { display: grid; gap: 20px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.field { display: grid; gap: 4px; flex: 1 1 120px; }
+input[type=text], select {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; min-height: 40px; width: 100%;
+}
+input:disabled, select:disabled { opacity: .55; }
+.players { display: grid; gap: 8px; }
+.player-row { display: flex; gap: 8px; align-items: center; }
+.player-row .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.player-row button { min-height: 40px; padding: 6px 12px; }
+.check { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+
+.teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.team { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; align-content: start; background: var(--bg); }
+.team.active { border-color: var(--accent); }
+.team-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.team-head strong { font-family: var(--display); font-weight: 400; font-size: 16px; overflow-wrap: anywhere; }
+.team ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.team li { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.team li .n { overflow-wrap: anywhere; }
+.team li.new { color: var(--accent); font-weight: 700; animation: flash .8s ease-out; border-radius: 6px; }
+.team li.empty { color: var(--muted); font-style: italic; }
+.chip { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 1px 8px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.N { color: var(--naruto); }
+.chip.S { color: var(--shippuden); }
+.aff { color: var(--muted); }
+footer { color: var(--muted); font-size: 13px; }
+kbd { font: inherit; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+@media (prefers-reduced-motion: reduce) { .reveal.flash { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Shinobi <span>Draft</span> Wheel</h1>
+    <p class="sub">Teams take turns spinning. Each character goes to the team that spun. Only characters from Naruto and Naruto Shippuden are in the wheel. Nothing from Boruto.</p>
+  </header>
+
+  <div class="main">
+    <section class="stage" aria-label="Wheel">
+      <div class="turn">
+        <div>
+          <div class="label" id="turnLabel">Up next</div>
+          <div class="turn-name" id="turnName">—</div>
+        </div>
+        <div class="progress" id="progress"></div>
+      </div>
+
+      <div class="wheel-box">
+        <canvas id="wheel" width="1080" height="1080" aria-label="Character wheel"></canvas>
+        <div class="pointer" aria-hidden="true"></div>
+        <div class="hub" id="hub"></div>
+      </div>
+
+      <div class="reveal" id="reveal" aria-live="polite">
+        <span class="label">Last pick</span>
+        <div class="who" id="revealName">Press Spin to start</div>
+        <div class="meta" id="revealMeta">Each spin adds one character to the team whose turn it is.</div>
+      </div>
+
+      <div class="controls">
+        <button class="primary" id="spinBtn">Spin</button>
+        <button id="autoBtn">Auto-draft the rest</button>
+        <button class="ghost" id="undoBtn">Undo last pick</button>
+      </div>
+      <p class="hint">Press <kbd>Space</kbd> to spin.</p>
+    </section>
+
+    <div class="side">
+      <section class="panel" aria-label="Setup">
+        <div class="team-head"><h2>Setup</h2><button class="ghost danger" id="resetBtn">New draft</button></div>
+        <div class="players" id="players"></div>
+        <div class="row">
+          <div class="field" style="flex:2 1 180px">
+            <label class="label" for="newPlayer">Add team</label>
+            <input type="text" id="newPlayer" maxlength="24" placeholder="Team or friend name">
+          </div>
+          <button id="addBtn">Add</button>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label class="label" for="rounds">Picks each</label>
+            <select id="rounds"></select>
+          </div>
+          <div class="field">
+            <label class="label" for="era">Series</label>
+            <select id="era">
+              <option value="both">Naruto + Shippuden</option>
+              <option value="N">Naruto only</option>
+              <option value="S">Shippuden only</option>
+            </select>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="unique"> No duplicates across teams</label>
+        <p class="hint" id="setupHint"></p>
+      </section>
+
+      <section class="panel" aria-label="Teams">
+        <div class="team-head"><h2>Teams</h2><span class="progress" id="poolCount"></span></div>
+        <div class="teams" id="teams"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer>A character's tag shows which anime they first really appear in: Naruto (Part I) or Shippuden (Part II).</footer>
+</div>
+
+<script>
+(() => {
+  const RAW = {
+    N: [
+      ["Naruto Uzumaki","Leaf"],["Sasuke Uchiha","Leaf"],["Sakura Haruno","Leaf"],["Kakashi Hatake","Leaf"],
+      ["Iruka Umino","Leaf"],["Konohamaru Sarutobi","Leaf"],["Hiruzen Sarutobi","Leaf"],["Rock Lee","Leaf"],
+      ["Neji Hyuga","Leaf"],["Tenten","Leaf"],["Might Guy","Leaf"],["Shikamaru Nara","Leaf"],
+      ["Choji Akimichi","Leaf"],["Ino Yamanaka","Leaf"],["Asuma Sarutobi","Leaf"],["Kiba Inuzuka","Leaf"],
+      ["Hinata Hyuga","Leaf"],["Shino Aburame","Leaf"],["Kurenai Yuhi","Leaf"],["Anko Mitarashi","Leaf"],
+      ["Ibiki Morino","Leaf"],["Hiashi Hyuga","Leaf"],["Shikaku Nara","Leaf"],["Inoichi Yamanaka","Leaf"],
+      ["Choza Akimichi","Leaf"],["Hayate Gekko","Leaf"],["Kotetsu Hagane","Leaf"],["Izumo Kamizuki","Leaf"],
+      ["Jiraiya","Leaf"],["Tsunade","Leaf"],["Shizune","Leaf"],["Minato Namikaze","Leaf"],
+      ["Hashirama Senju","Leaf"],["Tobirama Senju","Leaf"],["Gaara","Sand"],["Temari","Sand"],
+      ["Kankuro","Sand"],["Baki","Sand"],["Yashamaru","Sand"],["Zabuza Momochi","Mist"],["Haku","Mist"],
+      ["Orochimaru","Sound"],["Kabuto Yakushi","Sound"],["Kimimaro","Sound"],["Tayuya","Sound"],
+      ["Sakon & Ukon","Sound"],["Jirobo","Sound"],["Kidomaru","Sound"],["Dosu Kinuta","Sound"],
+      ["Itachi Uchiha","Akatsuki"],["Kisame Hoshigaki","Akatsuki"],["Kurama","Tailed Beast"]
+    ],
+    S: [
+      ["Sai","Leaf"],["Yamato","Leaf"],["Danzo Shimura","Leaf"],["Kushina Uzumaki","Leaf"],
+      ["Rin Nohara","Leaf"],["Shisui Uchiha","Leaf"],["Fugaku Uchiha","Leaf"],["Torune Aburame","Leaf"],
+      ["Izuna Uchiha","Uchiha Clan"],["Madara Uchiha","Uchiha Clan"],["Obito Uchiha","Akatsuki"],
+      ["Deidara","Akatsuki"],["Sasori","Akatsuki"],["Hidan","Akatsuki"],["Kakuzu","Akatsuki"],
+      ["Nagato (Pain)","Akatsuki"],["Konan","Akatsuki"],["Zetsu","Akatsuki"],
+      ["Suigetsu Hozuki","Taka"],["Karin","Taka"],["Jugo","Taka"],
+      ["Killer Bee","Cloud"],["A (Fourth Raikage)","Cloud"],["Darui","Cloud"],["C","Cloud"],
+      ["Omoi","Cloud"],["Karui","Cloud"],["Samui","Cloud"],["Yugito Nii","Cloud"],
+      ["Kinkaku","Cloud"],["Ginkaku","Cloud"],
+      ["Mei Terumi","Mist"],["Chojuro","Mist"],["Ao","Mist"],["Yagura","Mist"],["Utakata","Mist"],
+      ["Gengetsu Hozuki","Mist"],["Onoki","Stone"],["Kurotsuchi","Stone"],["Kitsuchi","Stone"],
+      ["Roshi","Stone"],["Han","Stone"],["Mu","Stone"],["Chiyo","Sand"],["Rasa","Sand"],
+      ["Fu","Waterfall"],["Hanzo","Rain"],["Mifune","Iron"],["Guren","Sound"],["Fukasaku","Mt. Myoboku"],
+      ["Hagoromo Otsutsuki","Sage of Six Paths"],["Kaguya Otsutsuki","Otsutsuki"],
+      ["Indra Otsutsuki","Otsutsuki"],["Asura Otsutsuki","Otsutsuki"]
+    ]
+  };
+  const CHARS = [];
+  for (const era of ["N", "S"]) for (const [name, aff] of RAW[era]) CHARS.push({ id: CHARS.length, name, aff, era });
+  const ERA_NAME = { N: "Naruto", S: "Shippuden" };
+  const SEG = ["#FF8A1F", "#2F6B4F", "#E6BE55", "#35587F", "#C2502F", "#5E4A86", "#86B35A", "#1F4A3A"];
+  const SEG_INK = ["#1A0E02", "#ECF1E4", "#1A1402", "#ECF1E4", "#FFF4EA", "#ECF1E4", "#0E1C17", "#ECF1E4"];
+  const DOTS = ["#FF8A1F", "#7DB3E3", "#E6BE55", "#E0664A", "#86B35A", "#C79BE8", "#F2A7C3", "#5FD1C1", "#D9D2B6", "#B0875A"];
+  const KEY = "shinobi-draft-wheel-v3";
+
+  const defaults = () => ({ players: ["My team", "Other team"], rounds: 4, era: "both", unique: true, picks: [] });
+  let state = defaults();
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.players) && s.players.length) state = Object.assign(defaults(), s); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+  const $ = id => document.getElementById(id);
+  const canvas = $("wheel"), ctx = canvas.getContext("2d");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let rotation = 0, spinning = false, auto = false, lastPick = null;
+
+  const totalTurns = () => state.players.length * state.rounds;
+  const currentPlayer = () => state.picks.length % state.players.length;
+  const inEra = c => state.era === "both" || c.era === state.era;
+  function pool() {
+    const p = currentPlayer();
+    const taken = new Set(state.picks.filter(k => state.unique || k.player === p).map(k => k.char));
+    return CHARS.filter(c => inEra(c) && !taken.has(c.id));
+  }
+  const done = () => state.picks.length >= totalTurns() || pool().length === 0;
+
+  function rand(n) {
+    const a = new Uint32Array(1);
+    crypto.getRandomValues(a);
+    return a[0] % n;
+  }
+
+  function drawWheel(list) {
+    const W = canvas.width, r = W / 2 - 8, cx = W / 2, cy = W / 2;
+    ctx.clearRect(0, 0, W, W);
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2); ctx.fillStyle = "#0A1411"; ctx.fill();
+    const n = list.length;
+    if (!n) {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fillStyle = "#1B3327"; ctx.fill();
+      ctx.restore(); return;
+    }
+    const s = Math.PI * 2 / n;
+    const fs = Math.max(11, Math.min(30, s * r * 0.62));
+    const showLabels = s * r * 0.55 >= 10;
+    for (let i = 0; i < n; i++) {
+      const a0 = -Math.PI / 2 + rotation + i * s;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, a0, a0 + s); ctx.closePath();
+      const ci = i % SEG.length === 0 && i === n - 1 && n > 1 ? 1 : i % SEG.length;
+      ctx.fillStyle = SEG[ci]; ctx.fill();
+      if (n <= 160) { ctx.strokeStyle = "rgba(10,20,17,.55)"; ctx.lineWidth = 1.5; ctx.stroke(); }
+      if (showLabels) {
+        ctx.save();
+        ctx.translate(cx, cy); ctx.rotate(a0 + s / 2);
+        ctx.fillStyle = SEG_INK[ci];
+        ctx.font = `700 ${fs}px "Zen Kaku Gothic New", "Segoe UI", sans-serif`;
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        let label = list[i].name;
+        const maxW = r * 0.66;
+        while (ctx.measureText(label).width > maxW && label.length > 4) label = label.slice(0, -2) + "…";
+        ctx.fillText(label, r - 14, 0);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  function render() {
+    const list = pool();
+    const fin = done();
+    const p = currentPlayer();
+    $("turnLabel").textContent = fin ? "Draft complete" : `Round ${Math.floor(state.picks.length / state.players.length) + 1} of ${state.rounds}`;
+    $("turnName").innerHTML = "";
+    if (fin) $("turnName").textContent = "All teams are set";
+    else { const em = document.createElement("em"); em.textContent = state.players[p]; $("turnName").append(em, document.createTextNode("’s spin")); }
+    $("progress").textContent = `${state.picks.length} / ${totalTurns()} picks`;
+    $("hub").innerHTML = `<div>${list.length}<small>in wheel</small></div>`;
+    $("poolCount").textContent = `${CHARS.filter(inEra).length} characters in play`;
+    $("spinBtn").disabled = spinning || fin;
+    $("spinBtn").textContent = spinning ? "Spinning…" : "Spin";
+    $("autoBtn").disabled = fin && !auto;
+    $("autoBtn").textContent = auto ? "Stop auto-draft" : "Auto-draft the rest";
+    $("undoBtn").disabled = spinning || !state.picks.length;
+    const locked = state.picks.length > 0 || spinning;
+    $("rounds").disabled = $("era").disabled = $("unique").disabled = locked;
+    $("newPlayer").disabled = $("addBtn").disabled = locked || state.players.length >= 10;
+    $("setupHint").textContent = locked ? "Settings are locked once the draft starts. You can still rename teams. Press New draft to change the rest." : "Up to 10 teams. Teams spin in the order of this list, and each pick goes to the team that spun.";
+    $("rounds").value = state.rounds; $("era").value = state.era; $("unique").checked = state.unique;
+
+    const pl = $("players");
+    pl.innerHTML = "";
+    state.players.forEach((name, i) => {
+      const row = document.createElement("div"); row.className = "player-row";
+      const dot = document.createElement("span"); dot.className = "dot"; dot.style.background = DOTS[i % DOTS.length];
+      const inp = document.createElement("input"); inp.type = "text"; inp.id = "player-" + i; inp.value = name; inp.maxLength = 24;
+      inp.setAttribute("aria-label", `Team ${i + 1} name`);
+      inp.addEventListener("change", () => { state.players[i] = inp.value.trim() || `Team ${i + 1}`; save(); render(); });
+      const rm = document.createElement("button"); rm.className = "ghost"; rm.textContent = "Remove";
+      rm.setAttribute("aria-label", `Remove ${name}`);
+      rm.disabled = locked || state.players.length <= 2;
+      rm.addEventListener("click", () => { state.players.splice(i, 1); save(); render(); });
+      row.append(dot, inp, rm); pl.append(row);
+    });
+
+    const teams = $("teams");
+    teams.innerHTML = "";
+    state.players.forEach((name, i) => {
+      const t = document.createElement("div"); t.className = "team" + (!fin && i === p ? " active" : "");
+      const head = document.createElement("div"); head.className = "team-head";
+      const nm = document.createElement("strong"); nm.textContent = name;
+      const dot = document.createElement("span"); dot.className = "dot"; dot.style.cssText = `width:10px;height:10px;border-radius:50%;background:${DOTS[i % DOTS.length]}`;
+      head.append(nm, dot);
+      const ol = document.createElement("ol");
+      const mine = state.picks.filter(k => k.player === i);
+      for (let r = 0; r < state.rounds; r++) {
+        const li = document.createElement("li");
+        const k = mine[r];
+        if (k) {
+          const c = CHARS[k.char];
+          li.innerHTML = `<span class="n"></span><span class="chip ${c.era}">${ERA_NAME[c.era]}</span>`;
+          li.firstChild.textContent = c.name;
+          li.title = c.aff;
+          if (lastPick && k === state.picks[state.picks.length - 1]) li.classList.add("new");
+        } else { li.className = "empty"; li.textContent = `Pick ${r + 1} open`; }
+        ol.append(li);
+      }
+      t.append(head, ol); teams.append(t);
+    });
+
+    if (!spinning) drawWheel(list);
+  }
+
+  function showReveal(c, playerName) {
+    const box = $("reveal");
+    $("revealName").textContent = c.name;
+    $("revealMeta").innerHTML = `<span class="chip ${c.era}">${ERA_NAME[c.era]}</span><span class="aff"></span><span>goes to <strong></strong></span>`;
+    $("revealMeta").querySelector(".aff").textContent = c.aff;
+    $("revealMeta").querySelector("strong").textContent = playerName;
+    box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash");
+  }
+
+  function spin() {
+    if (spinning || done()) return Promise.resolve();
+    const list = pool();
+    const n = list.length, s = Math.PI * 2 / n;
+    const idx = rand(n);
+    const jitter = (rand(1000) / 1000 - 0.5) * 0.7;
+    const TAU = Math.PI * 2;
+    const target0 = -((idx + 0.5 + jitter) * s);
+    const cur = ((rotation % TAU) + TAU) % TAU;
+    const delta = (((target0 - cur) % TAU) + TAU) % TAU;
+    const turns = reduced ? 0 : (auto ? 3 : 5 + rand(3));
+    const from = rotation, to = rotation + turns * TAU + delta;
+    const dur = reduced ? 250 : (auto ? 1400 : 4200 + rand(900));
+    const player = currentPlayer();
+    spinning = true; render();
+    return new Promise(resolve => {
+      const t0 = performance.now();
+      const step = now => {
+        const t = Math.min(1, (now - t0) / dur);
+        const e = 1 - Math.pow(1 - t, 4);
+        rotation = from + (to - from) * e;
+        drawWheel(list);
+        if (t < 1) return requestAnimationFrame(step);
+        rotation = to % TAU;
+        const c = list[idx];
+        state.picks.push({ player, char: c.id });
+        lastPick = c; save();
+        spinning = false;
+        showReveal(c, state.players[player]);
+        render();
+        resolve();
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  async function runAuto() {
+    if (auto) { auto = false; render(); return; }
+    auto = true; render();
+    while (auto && !done()) {
+      await spin();
+      if (auto && !done()) await new Promise(r => setTimeout(r, reduced ? 150 : 500));
+    }
+    auto = false; render();
+  }
+
+  // Controls
+  const sel = $("rounds");
+  for (let i = 1; i <= 10; i++) { const o = document.createElement("option"); o.value = i; o.textContent = i; sel.append(o); }
+  sel.addEventListener("change", () => { state.rounds = +sel.value; save(); render(); });
+  $("era").addEventListener("change", e => { state.era = e.target.value; save(); render(); });
+  $("unique").addEventListener("change", e => { state.unique = e.target.checked; save(); render(); });
+  $("spinBtn").addEventListener("click", () => spin());
+  $("autoBtn").addEventListener("click", runAuto);
+  $("undoBtn").addEventListener("click", () => {
+    if (spinning || !state.picks.length) return;
+    const k = state.picks.pop(); save();
+    $("revealName").textContent = `Undid ${CHARS[k.char].name}`;
+    $("revealMeta").textContent = `${state.players[k.player] ?? "That player"} spins again.`;
+    render();
+  });
+  let resetArmed = false;
+  $("resetBtn").addEventListener("click", e => {
+    if (state.picks.length && !resetArmed) {
+      resetArmed = true; e.target.textContent = "Tap again to clear picks";
+      setTimeout(() => { resetArmed = false; e.target.textContent = "New draft"; }, 3000);
+      return;
+    }
+    resetArmed = false; e.target.textContent = "New draft";
+    auto = false; state.picks = []; save();
+    $("revealName").textContent = "Press Spin to start";
+    $("revealMeta").textContent = "Each spin adds one character to the team whose turn it is.";
+    render();
+  });
+  const add = () => {
+    const v = $("newPlayer").value.trim();
+    if (!v || state.players.length >= 10 || state.picks.length) return;
+    state.players.push(v); $("newPlayer").value = ""; save(); render();
+  };
+  $("addBtn").addEventListener("click", add);
+  $("newPlayer").addEventListener("keydown", e => { if (e.key === "Enter") add(); });
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" && !/INPUT|SELECT|BUTTON|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); spin(); }
+  });
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (!spinning) drawWheel(pool()); });
+  render();
+})();
+</script>
+</body>
+</html>
